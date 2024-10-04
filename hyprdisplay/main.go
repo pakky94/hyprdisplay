@@ -2,7 +2,10 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"hyprdisplay/backend"
+	"os/exec"
+	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -24,37 +27,86 @@ func main() {
 	}
 	defer db.Close()
 
+	currentSetup, err := backend.ReadHyprMonitors()
+	if err != nil {
+		panic(err)
+	}
+
+	dbSetup, err := backend.FindSetup(db, backend.ToKey(currentSetup))
+	if err != nil {
+		panic(err)
+	}
+
 	ctl, err := backend.OpenConn()
 	if err != nil {
 		panic(err)
 	}
 	defer ctl.Close()
 
-	cmdChan := make(chan string)
-	go func() {
-		for true {
-			cmd := <-cmdChan
-			println(cmd)
-		}
-	}()
+	if len(dbSetup) == 0 {
+		println("no setup found in db")
 
-	ctl.Loop(cmdChan)
-
-	/*
-		monitors, err := backend.ReadHyprMonitors()
-
+		err := backend.SaveSetup(db, backend.ToKey(currentSetup), currentSetup)
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		cmds := backend.Diff(currentSetup, dbSetup)
 
-		print(fmt.Sprintf("%+v", monitors))
+		if len(cmds) != 0 {
+			join := strings.Join(cmds, " ; ")
 
+			err := exec.Command("hyprctl", "--batch", join).Run()
+			if err != nil {
+				panic(err)
+			}
+			println(fmt.Sprintf("sent cmd %q", join))
+		}
+
+		// println(fmt.Sprintf("sent cmd %q, res %q", join, string(res)))
+
+		/*
+			for _, cmd := range cmds {
+				res, err := exec.Command("hyprctl", cmd).Output()
+				if err != nil {
+					panic(err)
+				}
+				println(fmt.Sprintf("sent cmd %q, res %q", cmd, string(res)))
+
+				// n, err := ctl.SendRaw([]byte("/" + cmd + "\n"))
+				// if err != nil {
+				// 	panic(err)
+				// }
+				// println(fmt.Sprintf("sent cmd %q, bytes %d", cmd, n))
+			}
+		*/
+	}
+
+	/*
 		ctl, err := backend.OpenConn()
 		if err != nil {
 			panic(err)
 		}
-
 		defer ctl.Close()
+
+		cmdChan := make(chan string)
+		go func() {
+			for true {
+				cmd := <-cmdChan
+				if strings.HasPrefix(cmd, "monitoradded>>") || strings.HasPrefix(cmd, "monitorremoved>>") {
+					println(cmd)
+					monitors, err := backend.ReadHyprMonitors()
+
+					if err != nil {
+						panic(err)
+					}
+
+					println(fmt.Sprintf("%+v", monitors))
+				}
+			}
+		}()
+
+		ctl.Loop(cmdChan)
 	*/
 
 	// ctl.SendRaw([]byte("/keyword monitor eDP-1, disable"))

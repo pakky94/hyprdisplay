@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"slices"
+	"strings"
 )
 
 type HyprCtl struct {
@@ -17,9 +18,8 @@ func (h *HyprCtl) Close() {
 	h.eventSocket.Close()
 }
 
-func (h *HyprCtl) SendRaw(cmd []byte) error {
-	_, err := h.cmdSocket.Write(cmd)
-	return err
+func (h *HyprCtl) SendRaw(cmd []byte) (int, error) {
+	return h.cmdSocket.Write(cmd)
 }
 
 func OpenConn() (*HyprCtl, error) {
@@ -62,7 +62,7 @@ func (hc *HyprCtl) Loop(ret chan string) error {
 			for ind >= 0 {
 				cmd := string(cmdBuf[:ind])
 				cmdBuf = cmdBuf[ind+1:]
-				ret <- cmd
+				ret <- strings.Trim(cmd, " \n")
 				ind = slices.Index(cmdBuf, '\n')
 			}
 		}

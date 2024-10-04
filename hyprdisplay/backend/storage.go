@@ -11,6 +11,125 @@ import (
 
 const DB_NAME string = "hyprdisplay.db"
 
+func SaveSetup(db *sql.DB, key string, ms []MonitorStatus) error {
+	_, err := db.Exec("BEGIN TRANSACTION;", key)
+
+	if err != nil {
+		return fmt.Errorf("Error during SaveSetup 1 %w", err)
+	}
+	_, err = db.Exec(`
+INSERT INTO Setup(Key) SELECT ?
+WHERE NOT EXISTS(SELECT 1 FROM Setup WHERE Key = ?);`,
+		key, key)
+	if err != nil {
+		_, err := db.Exec("ROLLBACK;", key)
+		return fmt.Errorf("Error during SaveSetup 2 %w", err)
+	}
+
+	_, err = db.Exec(`
+DELETE FROM MonitorSetup WHERE SetupId = (SELECt Id FROM Setup WHERE Key = ?);
+DELETE FROM Monitor WHERE NOT eXISTs (SELECt 1 FROM MonitorSetup ms WHERE ms.MonitorId = Id);`,
+		key)
+	if err != nil {
+		_, err := db.Exec("ROLLBACK;", key)
+		return fmt.Errorf("Error during SaveSetup 4 %w", err)
+	}
+
+	for _, m := range ms {
+		_, err = db.Exec(`
+INSERT INTO Monitor (
+	Name,
+	Description,
+	Disabled,
+	Width,
+	Height,
+	RefreshRate,
+	X,
+	Y,
+	Scale,
+	Transform
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO MonitorSetup (SetupId, MonitorId)
+VALUES (
+	(SELECT Id FROM setup WHERE Key=?),
+	(SELECT max(Id) FROM monitor)
+);`,
+			m.Name,
+			m.Description,
+			m.Disabled,
+			m.Width,
+			m.Height,
+			m.RefreshRate,
+			m.X,
+			m.Y,
+			m.Scale,
+			m.Transform,
+			key)
+
+		if err != nil {
+			db.Exec("ROLLBACK;", key)
+			return fmt.Errorf("Error during SaveSetup 3 %w", err)
+		}
+	}
+
+	_, err = db.Exec("COMMIT TRANSACTION;", key)
+
+	return nil //errors.New("SaveSetup not implemented")
+}
+
+func FindSetup(db *sql.DB, key string) ([]MonitorStatus, error) {
+	rows, err := db.Query(`
+SELECT 
+	m.Name,
+	m.Description,
+	m.Disabled,
+	m.Width,
+	m.Height,
+	m.RefreshRate,
+	m.X,
+	m.Y,
+	m.Scale,
+	m.Transform
+FROM Setup s
+JOIN MonitorSetup ms ON s.Id = ms.SetupId
+JOIN Monitor m ON m.Id = ms.MonitorId
+WHERE s.Key = ?
+		`, key)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return []MonitorStatus{}, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("Error running FindSetup query %w", err)
+	}
+
+	ms := make([]MonitorStatus, 0)
+	for rows.Next() {
+		m := MonitorStatus{}
+		err = rows.Scan(
+			&m.Name,
+			&m.Description,
+			&m.Disabled,
+			&m.Width,
+			&m.Height,
+			&m.RefreshRate,
+			&m.X,
+			&m.Y,
+			&m.Scale,
+			&m.Transform,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("Error running FindSetup query %w", err)
+		}
+		ms = append(ms, m)
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, fmt.Errorf("Error running FindSetup query %w", err)
+	}
+
+	return ms, nil
+}
+
 func DefaultDbPath() (string, error) {
 	xdgDataHome := os.Getenv("XDG_DATA_HOME")
 
@@ -120,7 +239,11 @@ CREATE TABLE Monitor (
 	Width INTEGER,
 	Height INTEGER,
 	RefreshRate NVARCHAR(50),
-	Disabled INTEGER
+	X INTEGER,
+	Y INTEGER,
+	Disabled INTEGER,
+	Scale NVARCHAR(50),
+	Transform INTEGER
 );
 
 CREATE TABLE Setup (
@@ -129,8 +252,8 @@ CREATE TABLE Setup (
 );
 
 CREATE TABLE MonitorSetup (
-	MonitorId BIGINT,
-	SetupId BIGINT,
+	MonitorId BIGINT NOT NULL,
+	SetupId BIGINT NOT NULL,
 	PRIMARY KEY (MonitorId, SetupId),
 	FOREIGN KEY (MonitorId) REFERENCES Monitor(Id),
 	FOREIGN KEY (SetupId) REFERENCES Setup(Id)
