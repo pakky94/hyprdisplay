@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"fmt"
+	"database/sql"
 	"strings"
 )
 
@@ -17,6 +17,26 @@ func Daemonize() {
 	}
 	defer db.Close()
 
+	ctl, err := OpenConn()
+	if err != nil {
+		panic(err)
+	}
+	defer ctl.Close()
+
+	err = tryApplySavedSetup(db)
+	if err != nil {
+		panic(err)
+	}
+
+	// cmdChan := make(chan string)
+	// go RunDaemon(db, cmdChan)
+	// ctl.Loop(cmdChan)
+
+	// ctl.SendRaw([]byte("/keyword monitor eDP-1, disable"))
+	// ctl.SendRaw([]byte("/keyword monitor eDP-1,preferred,0x0,1,transform,3"))
+}
+
+func tryApplySavedSetup(db *sql.DB) error {
 	currentSetup, err := ReadHyprMonitors()
 	if err != nil {
 		panic(err)
@@ -24,50 +44,38 @@ func Daemonize() {
 
 	dbSetup, err := FindSetup(db, ToKey(currentSetup))
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if len(dbSetup) == 0 {
-		println("no setup found in db")
-
+		println("a")
 		err := SaveSetup(db, ToKey(currentSetup), currentSetup)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
+		println("b")
 		cmds := Diff(currentSetup, dbSetup)
 		err := Apply(cmds)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
 
-	ctl, err := OpenConn()
-	if err != nil {
-		panic(err)
-	}
-	defer ctl.Close()
-
-	cmdChan := make(chan string)
-	go RunDaemon(cmdChan)
-	ctl.Loop(cmdChan)
-
-	// ctl.SendRaw([]byte("/keyword monitor eDP-1, disable"))
-	// ctl.SendRaw([]byte("/keyword monitor eDP-1,preferred,0x0,1,transform,3"))
+	return nil
 }
 
-func RunDaemon(cmdChan chan string) {
+func RunDaemon(db *sql.DB, cmdChan chan string) {
 	for true {
 		cmd := <-cmdChan
-		if strings.HasPrefix(cmd, "monitoradded>>") || strings.HasPrefix(cmd, "monitorremoved>>") {
-			println(cmd)
-			monitors, err := ReadHyprMonitors()
-
+		if strings.HasPrefix(cmd, "monitoradded>>") ||
+			strings.HasPrefix(cmd, "monitorremoved>>") {
+			err := tryApplySavedSetup(db)
 			if err != nil {
 				panic(err)
 			}
 
-			println(fmt.Sprintf("%+v", monitors))
+			// println(fmt.Sprintf("%+v", monitors))
 		}
 	}
 }

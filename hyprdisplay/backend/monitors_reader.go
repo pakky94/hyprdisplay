@@ -2,6 +2,7 @@ package backend
 
 import (
 	"encoding/json"
+	"fmt"
 	"os/exec"
 	"slices"
 	"strings"
@@ -53,8 +54,13 @@ func ReadHyprMonitors() ([]MonitorStatus, error) {
 	cmd := exec.Command("hyprctl", "monitors", "all", "-j")
 	res, err := cmd.Output()
 
+	stdErr := ""
+	if exitError, ok := err.(*exec.ExitError); ok {
+		stdErr = string(exitError.Stderr)
+	}
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error reading monitors %w, out: %q, details: %q", err, string(res), stdErr)
 	}
 
 	var monitors []msInternal
