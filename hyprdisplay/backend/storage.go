@@ -73,8 +73,11 @@ VALUES (
 	}
 
 	_, err = db.Exec("COMMIT TRANSACTION;", key)
+	if err != nil {
+		return fmt.Errorf("Error during SaveSetup 3 %w", err)
+	}
 
-	return nil //errors.New("SaveSetup not implemented")
+	return nil
 }
 
 func FindSetup(db *sql.DB, key string) ([]MonitorStatus, error) {
