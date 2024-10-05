@@ -2,10 +2,7 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"hyprdisplay/backend"
-	"os/exec"
-	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -52,34 +49,10 @@ func main() {
 		}
 	} else {
 		cmds := backend.Diff(currentSetup, dbSetup)
-
-		if len(cmds) != 0 {
-			join := strings.Join(cmds, " ; ")
-
-			err := exec.Command("hyprctl", "--batch", join).Run()
-			if err != nil {
-				panic(err)
-			}
-			println(fmt.Sprintf("sent cmd %q", join))
+		err := backend.Apply(cmds)
+		if err != nil {
+			panic(err)
 		}
-
-		// println(fmt.Sprintf("sent cmd %q, res %q", join, string(res)))
-
-		/*
-			for _, cmd := range cmds {
-				res, err := exec.Command("hyprctl", cmd).Output()
-				if err != nil {
-					panic(err)
-				}
-				println(fmt.Sprintf("sent cmd %q, res %q", cmd, string(res)))
-
-				// n, err := ctl.SendRaw([]byte("/" + cmd + "\n"))
-				// if err != nil {
-				// 	panic(err)
-				// }
-				// println(fmt.Sprintf("sent cmd %q, bytes %d", cmd, n))
-			}
-		*/
 	}
 
 	/*

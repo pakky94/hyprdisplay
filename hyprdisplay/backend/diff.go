@@ -2,8 +2,20 @@ package backend
 
 import (
 	"fmt"
+	"os/exec"
 	"slices"
+	"strings"
 )
+
+func Apply(cmds []string) error {
+	if len(cmds) == 0 {
+		return nil
+	}
+
+	join := strings.Join(cmds, " ; ")
+
+	return exec.Command("hyprctl", "--batch", join).Run()
+}
 
 func Diff(actual []MonitorStatus, target []MonitorStatus) []string {
 	res := make([]string, 0)
@@ -53,7 +65,7 @@ func singleDiff(actual MonitorStatus, target MonitorStatus) string {
 		)
 
 		if target.Transform != 0 {
-			return t + ", transform, " + string(target.Transform)
+			return t + ", transform, " + fmt.Sprint(target.Transform)
 		} else {
 			return t
 		}
