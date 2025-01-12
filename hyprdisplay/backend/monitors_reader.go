@@ -2,6 +2,7 @@ package backend
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"slices"
@@ -55,8 +56,9 @@ func ReadHyprMonitors() ([]MonitorStatus, error) {
 	res, err := cmd.Output()
 
 	stdErr := ""
-	if exitError, ok := err.(*exec.ExitError); ok {
-		stdErr = string(exitError.Stderr)
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		stdErr = string(exitErr.Stderr)
 	}
 
 	if err != nil {

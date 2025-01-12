@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func Apply(cmds []string) error {
+func Apply(cmds []string, ctl *HyprCtl) error {
 	if len(cmds) == 0 {
 		return nil
 	}

@@ -26,24 +26,25 @@ func OpenConn() (*HyprCtl, error) {
 	xdgRuntimeDir := os.Getenv("XDG_RUNTIME_DIR")
 	his := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
 
-	cmdSocketPath := fmt.Sprintf("%s/hypr/%s/.socket.sock", xdgRuntimeDir, his)
+	// cmdSocketPath := fmt.Sprintf("%s/hypr/%s/.socket.sock", xdgRuntimeDir, his)
 	eventSocketPath := fmt.Sprintf("%s/hypr/%s/.socket2.sock", xdgRuntimeDir, his)
 
-	cmdSocket, err := net.Dial("unix", cmdSocketPath)
+	// cmdSocket, err := net.Dial("unix", cmdSocketPath)
 
-	if err != nil {
-		return nil, fmt.Errorf("Error opening %s %w", cmdSocketPath, err)
-	}
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Error opening %s %w", cmdSocketPath, err)
+	// }
 
 	eventSocket, err := net.Dial("unix", eventSocketPath)
 
 	if err != nil {
-		cmdSocket.Close()
+		// cmdSocket.Close()
 		return nil, fmt.Errorf("Error opening %s %w", eventSocketPath, err)
 	}
 
 	return &HyprCtl{
-		cmdSocket,
+		// cmdSocket,
+		nil,
 		eventSocket,
 	}, nil
 }

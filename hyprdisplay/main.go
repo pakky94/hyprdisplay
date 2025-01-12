@@ -2,7 +2,9 @@ package main
 
 import (
 	"embed"
+	"flag"
 	"hyprdisplay/backend"
+	"log"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -13,10 +15,28 @@ import (
 var assets embed.FS
 
 func main() {
-	backend.Daemonize()
+	daemonize := flag.Bool("daemon", false, "--daemon to start daemon")
+	verbose := flag.Bool("v", false, "-v verbose")
+
+	flag.Parse()
+
+	backend.Verbose = *verbose
+
+	var daemon *backend.Daemon = nil
+
+	if *daemonize {
+		daemon = backend.Daemonize()
+	}
+
+	_ = startApp()
+
+	if daemon != nil {
+		log.Printf("quitting daemon")
+		daemon.Close()
+	}
 }
 
-func startApp() {
+func startApp() *App {
 	// Create an instance of the app structure
 	app := NewApp()
 
@@ -38,4 +58,6 @@ func startApp() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+
+	return app
 }
