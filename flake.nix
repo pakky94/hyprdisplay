@@ -124,6 +124,7 @@
             gtk3
             nodejs_20
             nsis
+            pnpm.configHook
             upx
             wails
             webkitgtk
