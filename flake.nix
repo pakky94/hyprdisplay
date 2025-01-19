@@ -21,7 +21,6 @@
             inherit (finalAttrs) pname version src;
             sourceRoot = "hyprdisplay/frontend";
             hash = "sha256-dC8C13deVd+REQAz01B1X2tFfhl4PmvlxZDJ4LmxDfs=";
-            # hash = pkgs.lib.fakeHash;
           };
 
           sourceRoot = "hyprdisplay/frontend";
@@ -62,6 +61,7 @@
           ];
         
           buildInputs = with pkgs; [
+            frontend
             webkitgtk_4_0
             libsoup_3
           ];
