@@ -20,7 +20,8 @@
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit (finalAttrs) pname version src;
             sourceRoot = "hyprdisplay/frontend";
-            hash = "sha256-Qm/SS0LD3uC8Jjveyu61FZ1jVRpoyNsIu9nAwL5EzTI=";
+            hash = "sha256-dC8C13deVd+REQAz01B1X2tFfhl4PmvlxZDJ4LmxDfs=";
+            # hash = pkgs.lib.fakeHash;
           };
 
           sourceRoot = "hyprdisplay/frontend";
